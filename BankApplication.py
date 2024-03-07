@@ -1,13 +1,13 @@
 import os
 
+
 class BankApplication:
     def __init__(self):
         self.balance = 0
         self.bank_data_folder = "Bank_Data"
         self.transaction_log_file = None
         self.user_name = None
-        self.temp_balance = 0  # Temporary balance to hold changes during the session
-
+        self.user_age = None
     def load_balance(self):
         try:
             with open(f"{self.bank_data_folder}/{self.user_name}_Bank_Data.txt", "r") as file:
@@ -64,6 +64,14 @@ class BankApplication:
         while True:
             try:
                 self.user_name = input("Please enter your name: ").strip()
+                self.user_age = int(input("Please enter your age: ").strip())
+                if self.user_age >= 16:
+                    print(f"Welcome, {self.user_name}!")
+                    break  # Break out of the loop if the age is valid
+                else:
+                    print("Invalid age! Please try again.")
+            except ValueError:
+                print("Invalid input. Please enter a valid age as a number.")
                 self.transaction_log_file = f"{self.user_name}_Transaction_Log.txt"
                 self.load_balance()
                 print(f"Welcome, {self.user_name}!")
