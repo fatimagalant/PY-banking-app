@@ -1,6 +1,5 @@
 import os
 
-
 class BankApplication:
     def __init__(self):
         self.balance = 0
@@ -8,7 +7,7 @@ class BankApplication:
         self.transaction_log_file = None
         self.user_name = None
         self.user_age = None
-        self.temp_balance = 0  # Added missing attribute
+        self.temp_balance = 0  # Reset temp_balance to 0 for each new user
 
     def load_balance(self):
         try:
@@ -62,8 +61,9 @@ class BankApplication:
         self.display_balance()
 
     def run(self):
-        while True:  # Added loop to restart the program
+        while True:
             print("Welcome to the Bank Application!")
+            self.temp_balance = 0  # Reset temp_balance to 0 for each new user
             while True:
                 try:
                     self.user_name = input("Please enter your name: ").strip()
@@ -73,7 +73,7 @@ class BankApplication:
                     self.user_age = int(input("Please enter your age: ").strip())
                     if self.user_age >= 16:
                         print(f"Welcome, {self.user_name}!")
-                        break  # Exit the age validation loop
+                        break
                     elif self.user_age <= 16:
                         print("Invalid age. Please enter an age of 16 or older.")
                 except ValueError:
@@ -94,13 +94,13 @@ class BankApplication:
 
                 if choice == "4":
                     print("Thank you for using the Bank Application. Goodbye!")
-                    break  # Break out of the inner loop and restart the program
+                    return
 
                 if choice == "3":
                     self.balance = self.temp_balance
                     self.save_balance()
                     print("Changes saved.")
-                    continue  # Continue the loop without displaying menu options
+                    continue
 
                 if choice == "1":
                     while True:
@@ -110,7 +110,7 @@ class BankApplication:
                             continue
                         if transaction_choice == "n" or transaction_choice == "no":
                             print("Thank you for using the Bank Application. Goodbye!")
-                            break  # Break out of the inner loop and restart the program
+                            break
 
                         print("1. Deposit")
                         print("2. Withdraw")
@@ -130,7 +130,6 @@ class BankApplication:
                 elif choice == "2":
                     self.load_balance()  # Reload the balance to ensure it's up to date
                     self.view_balance()
-
 
 if __name__ == "__main__":
     bank_app = BankApplication()
