@@ -1,21 +1,21 @@
 import os
 
+
 class BankApplication:
     def __init__(self):
         self.balance = 0
-        self.temp_balance = 0  # Initialize temp_balance
         self.bank_data_folder = "Bank_Data"
         self.transaction_log_file = None
         self.user_name = None
+        self.user_age = None
+        self.temp_balance = 0  # Added missing attribute
 
     def load_balance(self):
         try:
             with open(f"{self.bank_data_folder}/{self.user_name}_Bank_Data.txt", "r") as file:
                 self.balance = float(file.readline())
-                self.temp_balance = self.balance  # Update temp_balance as well
         except FileNotFoundError:
-            self.balance = 0
-            self.temp_balance = 0
+            self.balance = 0  # Set balance to 0 if the file doesn't exist for the current user
 
     def save_balance(self):
         if not os.path.exists(self.bank_data_folder):
@@ -24,7 +24,7 @@ class BankApplication:
             file.write(str(self.balance))
 
     def log_transaction(self, transaction_type, amount):
-        with open(f"{self.user_name}_Transaction_Log.txt", "a") as file:
+        with open(self.transaction_log_file, "a") as file:
             file.write(f"{transaction_type}: {amount}\n")
 
     def display_balance(self):
@@ -54,7 +54,7 @@ class BankApplication:
                     self.display_balance()
                     break
                 else:
-                    print("Insufficient funds or invalid amount provided.")
+                    print("Insufficient funds or an invalid amount provided.")
             except ValueError:
                 print("Invalid input. Please provide a valid number.")
 
@@ -62,70 +62,76 @@ class BankApplication:
         self.display_balance()
 
     def run(self):
-        print("Welcome to the Bank Application!")
-        self.user_name = input("Please enter your name: ").strip()
-        while True:
-            try:
-                self.user_age = int(input("Please enter your age: ").strip())
-                if self.user_age < 16:
-                    print("User is too young to hold a bank account. Please try again.")
-                else:
-                    print(f"Welcome, {self.user_name}!")
-                    break
-            except ValueError:
-                print("Invalid input. Please enter a valid age as a number.")
-
-        self.transaction_log_file = f"{self.user_name}_Transaction_Log.txt"
-        self.load_balance()
-        while True:
-            print("\nMenu:")
-            print("1. Make a transaction")
-            print("2. View current balance")
-            print("3. Save changes")
-            print("4. Exit")
-            choice = input("Please choose an option: ").strip()
-            if choice == "1":
-                while True:
-                    transaction_choice = input("Would you like to make a transaction? (Yes/No) ").strip().lower()
-                    if transaction_choice not in ["y", "n", "yes", "no"]:
-                        print("Invalid input. Please enter 'Yes' or 'No'.")
+        while True:  # Added loop to restart the program
+            print("Welcome to the Bank Application!")
+            while True:
+                try:
+                    self.user_name = input("Please enter your name: ").strip()
+                    if not self.user_name.replace(" ", "").isalpha():
+                        print("Invalid name. Please enter a valid name without numbers or special characters.")
                         continue
-                    if transaction_choice == "n" or transaction_choice == "no":
-                        print("Thank you for using the Bank Application. Goodbye!")
-                        return
+                    self.user_age = int(input("Please enter your age: ").strip())
+                    if self.user_age >= 16:
+                        print(f"Welcome, {self.user_name}!")
+                        break  # Exit the age validation loop
+                    elif self.user_age <= 16:
+                        print("Invalid age. Please enter an age of 16 or older.")
+                except ValueError:
+                    print("Invalid input. Please enter a valid age as a number.")
 
-                    print("1. Deposit")
-                    print("2. Withdraw")
-                    transaction_type = input("Choose an option (1/2): ").strip()
-                    if transaction_type not in ["1", "2"]:
-                        print("Invalid option. Please choose 1 or 2.")
-                        continue
-                        
-                    self.display_balance()
+            self.transaction_log_file = f"{self.user_name}_Transaction_Log.txt"
+            self.load_balance()
+            while True:
+                print("\nMenu:")
+                print("1. Make a transaction")
+                print("2. View current balance")
+                print("3. Save changes")
+                print("4. Exit")
+                choice = input("Please choose an option: ").strip()
+                if choice not in ["1", "2", "3", "4"]:
+                    print("Invalid option. Please choose a valid option.")
+                    continue
 
-                    if transaction_type == "1":
-                        self.deposit()
-                    else:
-                        self.withdraw()
-                    break
+                if choice == "4":
+                    print("Thank you for using the Bank Application. Goodbye!")
+                    break  # Break out of the inner loop and restart the program
 
-            elif choice == "2":
-                self.load_balance()  # Reload balance to ensure it's up to date
-                self.view_balance()
+                if choice == "3":
+                    self.balance = self.temp_balance
+                    self.save_balance()
+                    print("Changes saved.")
+                    continue  # Continue the loop without displaying menu options
 
-            elif choice == "3":
-                self.balance = self.temp_balance
-                self.save_balance()
-                print("Changes saved.")
+                if choice == "1":
+                    while True:
+                        transaction_choice = input("Would you like to make a transaction? (Yes/No) ").strip().lower()
+                        if transaction_choice not in ["y", "n", "yes", "no"]:
+                            print("Invalid input. Please enter 'Yes' or 'No'.")
+                            continue
+                        if transaction_choice == "n" or transaction_choice == "no":
+                            print("Thank you for using the Bank Application. Goodbye!")
+                            break  # Break out of the inner loop and restart the program
 
-            elif choice == "4":
-                print("Thank you for using the Bank Application. Goodbye!")
-                return
+                        print("1. Deposit")
+                        print("2. Withdraw")
+                        transaction_type = input("Choose an option (1/2): ").strip()
+                        if transaction_type not in ["1", "2"]:
+                            print("Invalid option. Please choose 1 or 2.")
+                            continue
 
-            else:
-                print("Invalid option. Please choose a valid option.")
+                        self.display_balance()
 
-# Main program
+                        if transaction_type == "1":
+                            self.deposit()
+                        else:
+                            self.withdraw()
+                        break
+
+                elif choice == "2":
+                    self.load_balance()  # Reload the balance to ensure it's up to date
+                    self.view_balance()
+
+
 if __name__ == "__main__":
     bank_app = BankApplication()
     bank_app.run()
