@@ -13,6 +13,8 @@ class BankApplicationGUI:
         self.root.geometry("500x500")
 
         self.bank_data_folder = "Bank_Data"
+        self.transaction_folder = "Transaction_Data"
+        self.current_user_folder = None
         self.current_user_file = None
         self.current_username = None
         self.current_pin = None
@@ -33,6 +35,12 @@ class BankApplicationGUI:
         self.entry_pin = tk.Entry(self.root, show="*")
         self.entry_pin.pack()
 
+        self.label_balance = tk.Label(self.root, text="Opening Balance:")
+        self.label_balance.pack()
+
+        self.entry_balance = tk.Entry(self.root)
+        self.entry_balance.pack()
+
         self.btn_register = tk.Button(self.root, text="Register", command=self.register)
         self.btn_register.pack()
 
@@ -48,25 +56,38 @@ class BankApplicationGUI:
     def register(self):
         username = self.entry_username.get()
         password = self.entry_pin.get()
+        opening_balance = self.entry_balance.get()
 
-        if not username or not password:
-            messagebox.showerror("Error", "Please provide both username and password.")
+        if not username or not password or not opening_balance:
+            messagebox.showerror("Error", "Please provide username, password, and opening balance.")
+            return
+
+        if not opening_balance.isdigit():
+            messagebox.showerror("Error", "Opening balance must be a numeric value.")
             return
 
         if not os.path.exists(self.bank_data_folder):
             os.makedirs(self.bank_data_folder)
 
-        user_file_path = f"{self.bank_data_folder}/{username}_Data.txt"
+        user_folder_path = os.path.join(self.bank_data_folder, username)
+        user_file_path = os.path.join(user_folder_path, f"{username}_Data.txt")
 
-        if os.path.exists(user_file_path):
+        if os.path.exists(user_folder_path):
             messagebox.showerror("Error", "Username already exists. Please choose another.")
             return
 
         hashed_password = hashlib.sha256(password.encode()).hexdigest()
 
+        os.makedirs(user_folder_path)
+
         with open(user_file_path, "w") as file:
-            file.write(f"{hashed_password}\n")
-            file.write("0.0\n")  # Initial balance
+            file.write(f"Username: {username}\n")
+            file.write(f"Password: {hashed_password}\n")
+            file.write(f"Balance: {float(opening_balance):.2f}\n")  # Opening balance
+
+        # Create transaction folder for the user
+        transaction_folder_path = os.path.join(self.transaction_folder, username)
+        os.makedirs(transaction_folder_path)
 
         messagebox.showinfo("Success", "Account registered successfully.")
 
@@ -74,19 +95,21 @@ class BankApplicationGUI:
         username = self.entry_username.get()
         password = self.entry_pin.get()
 
-        user_file_path = f"{self.bank_data_folder}/{username}_Data.txt"
+        user_file_path = os.path.join(self.bank_data_folder, f"{username}/{username}_Data.txt")
 
         if not os.path.exists(user_file_path):
             messagebox.showerror("Error", "Account not found. Please register first.")
             return
 
         with open(user_file_path, "r") as file:
-            saved_hashed_password = file.readline().strip()
+            lines = file.readlines()
+            saved_hashed_password = lines[1].split(":")[1].strip()  # Extracting hashed password from the file
             entered_hashed_password = hashlib.sha256(password.encode()).hexdigest()
             if saved_hashed_password != entered_hashed_password:
                 messagebox.showerror("Error", "Incorrect password.")
                 return
 
+        self.current_user_folder = os.path.dirname(user_file_path)
         self.current_user_file = user_file_path
         self.current_username = username
         self.show_logged_in_screen()
@@ -115,7 +138,7 @@ class BankApplicationGUI:
     def check_balance(self):
         with open(self.current_user_file, "r") as file:
             lines = file.readlines()
-            balance = float(lines[1])
+            balance = float(lines[2].split(":")[1].strip())  # Extracting balance from the file
             messagebox.showinfo("Balance", f"Your current balance is: {balance}")
 
     def deposit(self):
@@ -127,11 +150,16 @@ class BankApplicationGUI:
 
         with open(self.current_user_file, "r+") as file:
             lines = file.readlines()
-            balance = float(lines[1])
+            balance = float(lines[2].split(":")[1].strip())  # Extracting balance from the file
             balance += amount
             file.seek(0)
             file.write(lines[0])
-            file.write(f"{balance}\n")
+            file.write(lines[1])
+            file.write(f"Balance: {balance:.2f}\n")
+
+        # Record transaction
+        transaction_amount = f"+{amount:.2f}"
+        self.record_transaction(transaction_amount)
 
         messagebox.showinfo("Success", "Amount deposited successfully.")
 
@@ -140,7 +168,7 @@ class BankApplicationGUI:
 
         with open(self.current_user_file, "r+") as file:
             lines = file.readlines()
-            balance = float(lines[1])
+            balance = float(lines[2].split(":")[1].strip())  # Extracting balance from the file
 
             if amount > balance:
                 messagebox.showerror("Error", "Insufficient balance.")
@@ -149,22 +177,51 @@ class BankApplicationGUI:
             balance -= amount
             file.seek(0)
             file.write(lines[0])
-            file.write(f"{balance}\n")
+            file.write(lines[1])
+            file.write(f"Balance: {balance:.2f}\n")
+
+        # Record transaction
+        transaction_amount = f"-{amount:.2f}"
+        self.record_transaction(transaction_amount)
 
         messagebox.showinfo("Success", "Amount withdrawn successfully.")
 
     def show_transaction_details(self):
-        with open(self.current_user_file, "r") as file:
-            lines = file.readlines()
-            transactions = lines[2:]
-            message = "\n".join(transactions)
-            messagebox.showinfo("Transaction Details", message)
+        transaction_folder_path = os.path.join(self.transaction_folder, self.current_username)
+        transaction_files = os.listdir(transaction_folder_path)
+
+        if not transaction_files:
+            messagebox.showinfo("Transaction Details", "No transactions yet.")
+            return
+
+        transactions = ""
+        for file_name in transaction_files:
+            file_path = os.path.join(transaction_folder_path, file_name)
+            with open(file_path, "r") as file:
+                transaction_data                = file.read()
+                transactions += f"{transaction_data}\n"
+
+        messagebox.showinfo("Transaction Details", transactions)
 
     def logout(self):
         self.root.deiconify()  # Show login screen
+        self.clear_login_details()
+
+    def clear_login_details(self):
+        self.entry_username.delete(0, tk.END)
+        self.entry_pin.delete(0, tk.END)
+        self.entry_balance.delete(0, tk.END)
+        self.current_user_folder = None
         self.current_user_file = None
         self.current_username = None
         self.current_pin = None
+
+    def record_transaction(self, transaction_amount):
+        transaction_folder_path = os.path.join(self.transaction_folder, self.current_username)
+        transaction_file = os.path.join(transaction_folder_path, f"{self.current_username}_Transaction.txt")
+
+        with open(transaction_file, "a") as file:
+            file.write(f"{transaction_amount}\n")
 
     def generate_password(self):
         password = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
